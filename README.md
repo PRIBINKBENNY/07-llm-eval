@@ -4,6 +4,8 @@ A small, dependency-light **evaluation harness for LLM apps**: YAML test suites,
 
 **▶ Sample report:** https://pribinkbenny.github.io/07-llm-eval/examples/sample_report.html (scripted demo answers, showing a regression caught between two prompt versions)
 
+<img src="docs/report.jpg" width="520" alt="HTML eval report: pass rate, regression gate failed, scores by scorer and tag">
+
 ```
 suite.yaml ──► target (any OpenAI-compatible model, or your app over HTTP)
                 │  concurrent · retried · cached · traced
