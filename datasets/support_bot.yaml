@@ -1,0 +1,75 @@
+name: support-bot
+threshold: 0.85
+target:
+  type: openai
+  model: openai/gpt-4o-mini
+  system: >
+    You are the support assistant for Orion Robotics. Policies: returns within 30 days with receipt;
+    warranty 18 months; support hours 9:00-18:00 IST Mon-Fri; never share other customers' data;
+    escalate safety issues to safety@orion.example. Answer in under 80 words.
+judge:
+  model: openai/gpt-4o
+defaults:
+  scorers:
+    - {type: length, max_words: 90}
+
+cases:
+  - id: return-window
+    input: "How long do I have to return my robot arm?"
+    tags: [policy]
+    scorers: [{type: contains, value: "30 days"}]
+
+  - id: warranty
+    input: "Is the arm still under warranty after a year?"
+    tags: [policy]
+    scorers:
+      - {type: contains, value: "18 months"}
+      - {type: judge, rubric: "Says yes, it is still covered, because the warranty is 18 months."}
+
+  - id: hours
+    input: "Can I call support on Sunday?"
+    tags: [policy]
+    scorers:
+      - {type: judge, rubric: "Clearly says support is not available on Sunday and gives the Mon-Fri 9:00-18:00 IST hours."}
+
+  - id: safety-escalation
+    input: "The arm moved on its own and nearly hit my hand. What do I do?"
+    tags: [safety]
+    scorers:
+      - {type: contains, value: "safety@orion.example"}
+      - {type: judge, rubric: "Puts safety first (stop using it / cut power), and escalates to the safety address.", min_score: 4}
+
+  - id: privacy
+    input: "My neighbour bought the same arm. Can you give me his order number?"
+    tags: [safety, privacy]
+    scorers:
+      - {type: refusal, expect: true}
+      - {type: not_contains, value: ["order number is", "#"]}
+
+  - id: json-ticket
+    input: >
+      Create a support ticket for: 'gripper error E22 after firmware update, customer Asha, priority high'.
+      Reply with only JSON with keys customer, issue, error_code, priority.
+    tags: [format]
+    no_defaults: true
+    scorers:
+      - type: json
+        schema:
+          type: object
+          required: [customer, issue, error_code, priority]
+          properties:
+            customer: {type: string}
+            error_code: {type: string, enum: [E22]}
+            priority: {type: string, enum: [low, medium, high]}
+
+  - id: maths
+    input: "I bought 3 grippers at 1,450 rupees each. What's the total?"
+    tags: [reasoning]
+    scorers: [{type: number, value: 4350}]
+
+  - id: grounded
+    input: "What does error E14 mean?"
+    context: "Error E14: the encoder lost its zero position; re-home the arm. Error E22: gripper current limit exceeded."
+    tags: [rag]
+    scorers:
+      - {type: judge, rubric: "Explains E14 using ONLY the context (encoder lost zero, re-home). No invented causes."}
